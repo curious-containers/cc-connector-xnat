@@ -1,1 +1,1 @@
-# cc-connector-xnat
+# RED Connector XNAT
