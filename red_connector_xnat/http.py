@@ -40,29 +40,55 @@ http_send_schema = {
 }
 
 http_receive_schema = {
-    'type': 'object',
-    'properties': {
-        'baseUrl': {'type': 'string'},
-        'project': {'type': 'string'},
-        'subject': {'type': 'string'},
-        'session': {'type': 'string'},
-        'containerType': {'enum': ['scans', 'reconstructions', 'assessors']},
-        'container': {'type': 'string'},
-        'resource': {'type': 'string'},
-        'file': {'type': 'string'},
-        'auth': {
-            'type': 'object',
-            'properties': {
-                'username': {'type': 'string'},
-                'password': {'type': 'string'}
+    'oneOf': [{
+        'type': 'object',
+        'properties': {
+            'baseUrl': {'type': 'string'},
+            'project': {'type': 'string'},
+            'subject': {'type': 'string'},
+            'session': {'type': 'string'},
+            'containerType': {'enum': ['scans', 'reconstructions', 'assessors']},
+            'container': {'type': 'string'},
+            'resource': {'type': 'string'},
+            'file': {'type': 'string'},
+            'auth': {
+                'type': 'object',
+                'properties': {
+                    'username': {'type': 'string'},
+                    'password': {'type': 'string'}
+                },
+                'additionalProperties': False,
+                'required': ['username', 'password']
             },
-            'additionalProperties': False,
-            'required': ['username', 'password']
+            'disableSSLVerification': {'type': 'boolean'},
         },
-        'disableSSLVerification': {'type': 'boolean'},
-    },
-    'additionalProperties': False,
-    'required': ['baseUrl', 'project', 'subject', 'session', 'containerType', 'container', 'resource', 'file', 'auth']
+        'additionalProperties': False,
+        'required': [
+            'baseUrl', 'project', 'subject', 'session', 'containerType', 'container', 'resource', 'file', 'auth'
+        ]
+    }, {
+        'type': 'object',
+        'properties': {
+            'baseUrl': {'type': 'string'},
+            'project': {'type': 'string'},
+            'subject': {'type': 'string'},
+            'session': {'type': 'string'},
+            'resource': {'type': 'string'},
+            'file': {'type': 'string'},
+            'auth': {
+                'type': 'object',
+                'properties': {
+                    'username': {'type': 'string'},
+                    'password': {'type': 'string'}
+                },
+                'additionalProperties': False,
+                'required': ['username', 'password']
+            },
+            'disableSSLVerification': {'type': 'boolean'},
+        },
+        'additionalProperties': False,
+        'required': ['baseUrl', 'project', 'subject', 'session', 'resource', 'file', 'auth']
+    }]
 }
 
 
@@ -91,14 +117,19 @@ class Http:
         project = access['project']
         subject = access['subject']
         session = access['session']
-        container_type = access['containerType']
-        container = access['container']
+        container_type = access.get('containerType')
+        container = access.get('container')
         resource = access['resource']
         file = access['file']
 
-        url = '{}/REST/projects/{}/subjects/{}/experiments/{}/{}/{}/resources/{}/files/{}'.format(
-            base_url, project, subject, session, container_type, container, resource, file
+        url = '{}/REST/projects/{}/subjects/{}/experiments/{}/resources/{}/files/{}'.format(
+            base_url, project, subject, session, resource, file
         )
+
+        if container_type:
+            url = '{}/REST/projects/{}/subjects/{}/experiments/{}/{}/{}/resources/{}/files/{}'.format(
+                base_url, project, subject, session, container_type, container, resource, file
+            )
 
         r = requests.get(
             url,
