@@ -242,7 +242,7 @@ class Http:
 
                 resource_exists = False
                 for er in existing_resources:
-                    if er['label'] == resource:
+                    if 'label' in er and er['label'] == resource:
                         resource_exists = True
                         break
 
