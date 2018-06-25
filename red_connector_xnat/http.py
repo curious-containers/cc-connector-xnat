@@ -189,36 +189,29 @@ class Http:
         cookies = r.cookies
 
         try:
-
             container_exists = False
             for ec in existing_containers:
-                if ec['ID'] == container:
+                if 'ID' in ec and ec['ID'] == container:
                     container_exists = True
                     break
 
             if not container_exists:
                 # create container
+                container_url = '{}/REST/projects/{}/subjects/{}/experiments/{}/{}/{}'.format(
+                    base_url, project, subject, session, container_type, container
+                )
                 if xsi_type:
-                    r = requests.put(
-                        '{}/REST/projects/{}/subjects/{}/experiments/{}/{}/{}?xsiType={}'.format(
-                            base_url, project, subject, session, container_type, container, xsi_type
-                        ),
-                        cookies=cookies,
-                        verify=verify
-                    )
-                    r.raise_for_status()
-                else:
-                    r = requests.put(
-                        '{}/REST/projects/{}/subjects/{}/experiments/{}/{}/{}'.format(
-                            base_url, project, subject, session, container_type, container
-                        ),
-                        cookies=cookies,
-                        verify=verify
-                    )
-                    r.raise_for_status()
+                    container_url = '{}?xsiType={}'.format(container_url, xsi_type)
 
+                r = requests.put(
+                    container_url,
+                    cookies=cookies,
+                    verify=verify
+                )
+                r.raise_for_status()
+
+                # create file
                 with open(internal['path'], 'rb') as f:
-                    # create file
                     r = requests.put(
                         '{}/REST/projects/{}/subjects/{}/experiments/{}/{}/{}/resources/{}/files/{}?inbody=true'.format(
                             base_url, project, subject, session, container_type, container, resource, file
@@ -272,13 +265,15 @@ class Http:
 
                     file_exists = False
                     for ef in existing_files:
-                        if ef['Name'] == file:
+                        if 'Name' in ef and ef['Name'] == file:
                             file_exists = True
                             break
 
                     if file_exists:
                         if not overwrite_existing_file:
-                            raise Exception('File "{}" already exists and overwrite_existing_file is not set.'.format(file))
+                            raise Exception(
+                                'File "{}" already exists and overwriteExistingFile is not set.'.format(file)
+                            )
 
                         # delete file
                         r = requests.delete(
@@ -303,24 +298,12 @@ class Http:
                         r.raise_for_status()
         except:
             # delete session
-            r = requests.delete(
-                '{}/data/JSESSION'.format(
-                    base_url
-                ),
-                cookies=cookies,
-                verify=verify
-            )
+            r = requests.delete('{}/data/JSESSION'.format(base_url), cookies=cookies, verify=verify)
             r.raise_for_status()
             raise
 
         # delete session
-        r = requests.delete(
-            '{}/data/JSESSION'.format(
-                base_url
-            ),
-            cookies=cookies,
-            verify=verify
-        )
+        r = requests.delete('{}/data/JSESSION'.format(base_url), cookies=cookies, verify=verify)
         r.raise_for_status()
 
     @staticmethod
