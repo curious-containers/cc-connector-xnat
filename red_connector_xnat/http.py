@@ -23,7 +23,7 @@ http_send_schema = {
         'resource': {'type': 'string'},
         'xsiType': {'type': 'string'},
         'file': {'type': 'string'},
-        'upsert': {'type': 'boolean'},
+        'overwriteExistingFile': {'type': 'boolean'},
         'auth': {
             'type': 'object',
             'properties': {
@@ -36,7 +36,7 @@ http_send_schema = {
         'disableSSLVerification': {'type': 'boolean'},
     },
     'additionalProperties': False,
-    'required': ['baseUrl', 'project', 'subject', 'session', 'containerType', 'container', 'xsiType', 'file', 'auth']
+    'required': ['baseUrl', 'project', 'subject', 'session', 'containerType', 'container', 'file', 'auth']
 }
 
 http_receive_schema = {
@@ -173,9 +173,9 @@ class Http:
         container_type = access['containerType']
         container = access['container']
         resource = access.get('resource', 'OTHER')
-        xsi_type = access['xsiType']
+        xsi_type = access.get('xsiType')
         file = access['file']
-        upsert = access.get('upsert')
+        overwrite_existing_file = access.get('overwriteExistingFile')
 
         r = requests.get(
             '{}/REST/projects/{}/subjects/{}/experiments/{}/{}?format=json'.format(
@@ -188,91 +188,130 @@ class Http:
         existing_containers = r.json()['ResultSet']['Result']
         cookies = r.cookies
 
-        container_exists = False
-        for ec in existing_containers:
-            if ec['ID'] == container:
-                container_exists = True
-                break
+        try:
 
-        if container_exists:
-            if not upsert:
-                raise Exception('Container {} already exists and upsert is not set.'.format(container))
-
-            r = requests.get(
-                '{}/REST/projects/{}/subjects/{}/experiments/{}/{}/{}/resources?format=json'.format(
-                    base_url, project, subject, session, container_type, container
-                ),
-                cookies=cookies,
-                verify=verify
-            )
-            r.raise_for_status()
-            existing_resources = r.json()['ResultSet']['Result']
-
-            resource_exists = False
-            for er in existing_resources:
-                if er['label'] == resource:
-                    resource_exists = True
+            container_exists = False
+            for ec in existing_containers:
+                if ec['ID'] == container:
+                    container_exists = True
                     break
 
-            if resource_exists:
-                r = requests.get(
-                    '{}/REST/projects/{}/subjects/{}/experiments/{}/{}/{}/resources/{}/files?format=json'.format(
-                        base_url, project, subject, session, container_type, container, resource
-                    ),
-                    cookies=cookies,
-                    verify=verify
-                )
-                r.raise_for_status()
-                existing_files = r.json()['ResultSet']['Result']
-
-                file_exists = False
-                for ef in existing_files:
-                    if ef['Name'] == file:
-                        file_exists = True
-                        break
-
-                if file_exists:
-                    # delete file
-                    r = requests.delete(
-                        '{}/REST/projects/{}/subjects/{}/experiments/{}/{}/{}/resources/{}/files/{}'.format(
-                            base_url, project, subject, session, container_type, container, resource, file
+            if not container_exists:
+                # create container
+                if xsi_type:
+                    r = requests.put(
+                        '{}/REST/projects/{}/subjects/{}/experiments/{}/{}/{}?xsiType={}'.format(
+                            base_url, project, subject, session, container_type, container, xsi_type
+                        ),
+                        cookies=cookies,
+                        verify=verify
+                    )
+                    r.raise_for_status()
+                else:
+                    r = requests.put(
+                        '{}/REST/projects/{}/subjects/{}/experiments/{}/{}/{}'.format(
+                            base_url, project, subject, session, container_type, container
                         ),
                         cookies=cookies,
                         verify=verify
                     )
                     r.raise_for_status()
 
-            # delete container
+                with open(internal['path'], 'rb') as f:
+                    # create file
+                    r = requests.put(
+                        '{}/REST/projects/{}/subjects/{}/experiments/{}/{}/{}/resources/{}/files/{}?inbody=true'.format(
+                            base_url, project, subject, session, container_type, container, resource, file
+                        ),
+                        data=f,
+                        cookies=cookies,
+                        verify=verify
+                    )
+                    r.raise_for_status()
+
+            else:
+                r = requests.get(
+                    '{}/REST/projects/{}/subjects/{}/experiments/{}/{}?format=json'.format(
+                        base_url, project, subject, session, container_type
+                    ),
+                    cookies=cookies,
+                    verify=verify
+                )
+                r.raise_for_status()
+                existing_resources = r.json()['ResultSet']['Result']
+
+                resource_exists = False
+                for er in existing_resources:
+                    if er['label'] == resource:
+                        resource_exists = True
+                        break
+
+                if not resource_exists:
+                    # create file
+                    with open(internal['path'], 'rb') as f:
+                        r = requests.put(
+                            '{}/REST/projects/{}/subjects/{}/experiments/{}/{}/{}/resources/{}/files/{}?inbody=true'.format(
+                                base_url, project, subject, session, container_type, container, resource, file
+                            ),
+                            data=f,
+                            cookies=cookies,
+                            verify=verify
+                        )
+                        r.raise_for_status()
+
+                else:
+                    r = requests.get(
+                        '{}/REST/projects/{}/subjects/{}/experiments/{}/{}/{}/resources/{}/files?format=json'.format(
+                            base_url, project, subject, session, container_type, container, resource
+                        ),
+                        cookies=cookies,
+                        verify=verify
+                    )
+                    r.raise_for_status()
+                    existing_files = r.json()['ResultSet']['Result']
+
+                    file_exists = False
+                    for ef in existing_files:
+                        if ef['Name'] == file:
+                            file_exists = True
+                            break
+
+                    if file_exists:
+                        if not overwrite_existing_file:
+                            raise Exception('File "{}" already exists and overwrite_existing_file is not set.'.format(file))
+
+                        # delete file
+                        r = requests.delete(
+                            '{}/REST/projects/{}/subjects/{}/experiments/{}/{}/{}/resources/{}/files/{}'.format(
+                                base_url, project, subject, session, container_type, container, resource, file
+                            ),
+                            cookies=cookies,
+                            verify=verify
+                        )
+                        r.raise_for_status()
+
+                    # create file
+                    with open(internal['path'], 'rb') as f:
+                        r = requests.put(
+                            '{}/REST/projects/{}/subjects/{}/experiments/{}/{}/{}/resources/{}/files/{}?inbody=true'.format(
+                                base_url, project, subject, session, container_type, container, resource, file
+                            ),
+                            data=f,
+                            cookies=cookies,
+                            verify=verify
+                        )
+                        r.raise_for_status()
+        except:
+            # delete session
             r = requests.delete(
-                '{}/REST/projects/{}/subjects/{}/experiments/{}/{}/{}'.format(
-                    base_url, project, subject, session, container_type, container
+                '{}/data/JSESSION'.format(
+                    base_url
                 ),
                 cookies=cookies,
                 verify=verify
             )
             r.raise_for_status()
-
-        # create container
-        r = requests.put(
-            '{}/REST/projects/{}/subjects/{}/experiments/{}/{}/{}?xsiType={}'.format(
-                base_url, project, subject, session, container_type, container, xsi_type
-            ),
-            cookies=cookies,
-            verify=verify
-        )
-        r.raise_for_status()
-
-        # create file
-        with open(internal['path'], 'rb') as f:
-            r = requests.put(
-                '{}/REST/projects/{}/subjects/{}/experiments/{}/{}/{}/resources/{}/files/{}?inbody=true'.format(
-                    base_url, project, subject, session, container_type, container, resource, file
-                ),
-                data=f,
-                cookies=cookies,
-                verify=verify
-            )
-            r.raise_for_status()
+            raise
 
         # delete session
         r = requests.delete(
