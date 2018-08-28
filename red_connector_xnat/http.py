@@ -227,7 +227,7 @@ class Http:
                     r.raise_for_status()
 
             else:
-                if existing_xsi_type != xsi_type:
+                if xsi_type and xsi_type != existing_xsi_type:
                     raise Exception(
                         'xsiType "{}" of existing container "{}" does not match provided xsiType "{}"'.format(
                             existing_xsi_type, container, xsi_type))
