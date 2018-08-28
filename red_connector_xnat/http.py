@@ -190,9 +190,12 @@ class Http:
 
         try:
             container_exists = False
+            existing_xsi_type = None
+
             for ec in existing_containers:
-                if 'ID' in ec and ec['ID'] == container:
+                if ('ID' in ec and ec['ID'] == container) or ('label' in ec and ec['label'] == container):
                     container_exists = True
+                    existing_xsi_type = ec['xsiType']
                     break
 
             if not container_exists:
@@ -200,6 +203,7 @@ class Http:
                 container_url = '{}/REST/projects/{}/subjects/{}/experiments/{}/{}/{}'.format(
                     base_url, project, subject, session, container_type, container
                 )
+
                 if xsi_type:
                     container_url = '{}?xsiType={}'.format(container_url, xsi_type)
 
@@ -223,9 +227,14 @@ class Http:
                     r.raise_for_status()
 
             else:
+                if existing_xsi_type != xsi_type:
+                    raise Exception(
+                        'xsiType "{}" of existing container "{}" does not match provided xsiType "{}"'.format(
+                            existing_xsi_type, container, xsi_type))
+
                 r = requests.get(
-                    '{}/REST/projects/{}/subjects/{}/experiments/{}/{}?format=json'.format(
-                        base_url, project, subject, session, container_type
+                    '{}/REST/projects/{}/subjects/{}/experiments/{}/{}/{}/resources?format=json'.format(
+                        base_url, project, subject, session, container_type, container
                     ),
                     cookies=cookies,
                     verify=verify
@@ -235,7 +244,7 @@ class Http:
 
                 resource_exists = False
                 for er in existing_resources:
-                    if 'label' in er and er['label'] == resource:
+                    if ('ID' in er and er['ID'] == resource) or ('label' in er and er['label'] == resource):
                         resource_exists = True
                         break
 
@@ -274,7 +283,6 @@ class Http:
                             raise Exception(
                                 'File "{}" already exists and overwriteExistingFile is not set.'.format(file)
                             )
-
                         # delete file
                         r = requests.delete(
                             '{}/REST/projects/{}/subjects/{}/experiments/{}/{}/{}/resources/{}/files/{}'.format(
@@ -296,7 +304,7 @@ class Http:
                             verify=verify
                         )
                         r.raise_for_status()
-        except:
+        except Exception:
             # delete session
             r = requests.delete('{}/data/JSESSION'.format(base_url), cookies=cookies, verify=verify)
             r.raise_for_status()
