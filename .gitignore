@@ -3,3 +3,4 @@ MANIFEST
 dist
 __pycache__
 venv
+red_connector_xnat.egg-info
