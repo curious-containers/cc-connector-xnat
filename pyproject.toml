@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "red-connector-xnat"
-version = "0.5"
+version = "0.6"
 authors = ["Christoph Jansen <Christoph.Jansen@htw-berlin.de>"]
 license = "AGPL-3.0"
 readme = "README.md"
@@ -16,3 +16,4 @@ requests = "^2.18"
 [tool.poetry.dev-dependencies]
 
 [tool.poetry.scripts]
+red-connector-xnat-http = 'red_connector_xnat.main:main'
