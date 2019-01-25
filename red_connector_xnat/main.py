@@ -5,3 +5,7 @@ from red_connector_xnat.version import VERSION
 
 def main():
     run_connector(Http, version=VERSION)
+
+
+if __name__ == '__main__':
+    main()
