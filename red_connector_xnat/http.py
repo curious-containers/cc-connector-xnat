@@ -88,6 +88,47 @@ http_receive_schema = {
         },
         'additionalProperties': False,
         'required': ['baseUrl', 'project', 'subject', 'session', 'resource', 'file', 'auth']
+    }, {
+        'type': 'object',
+        'properties': {
+            'baseUrl': {'type': 'string'},
+            'project': {'type': 'string'},
+            'subject': {'type': 'string'},
+            'resource': {'type': 'string'},
+            'file': {'type': 'string'},
+            'auth': {
+                'type': 'object',
+                'properties': {
+                    'username': {'type': 'string'},
+                    'password': {'type': 'string'}
+                },
+                'additionalProperties': False,
+                'required': ['username', 'password']
+            },
+            'disableSSLVerification': {'type': 'boolean'},
+        },
+        'additionalProperties': False,
+        'required': ['baseUrl', 'project', 'subject', 'resource', 'file', 'auth']
+    }, {
+        'type': 'object',
+        'properties': {
+            'baseUrl': {'type': 'string'},
+            'project': {'type': 'string'},
+            'resource': {'type': 'string'},
+            'file': {'type': 'string'},
+            'auth': {
+                'type': 'object',
+                'properties': {
+                    'username': {'type': 'string'},
+                    'password': {'type': 'string'}
+                },
+                'additionalProperties': False,
+                'required': ['username', 'password']
+            },
+            'disableSSLVerification': {'type': 'boolean'},
+        },
+        'additionalProperties': False,
+        'required': ['baseUrl', 'project', 'resource', 'file', 'auth']
     }]
 }
 
@@ -115,18 +156,28 @@ class Http:
 
         base_url = access['baseUrl'].rstrip('/')
         project = access['project']
-        subject = access['subject']
-        session = access['session']
+        subject = access.get('subject')
+        session = access.get('session')
         container_type = access.get('containerType')
         container = access.get('container')
         resource = access['resource']
         file = access['file']
 
-        url = '{}/REST/projects/{}/subjects/{}/experiments/{}/resources/{}/files/{}'.format(
-            base_url, project, subject, session, resource, file
+        url = '{}/REST/projects/{}/resources/{}/files/{}'.format(
+            base_url, project, resource, file
         )
 
-        if container_type:
+        if subject is not None:
+            url = '{}/REST/projects/{}/subjects/{}/resources/{}/files/{}'.format(
+                base_url, project, subject, resource, file
+            )
+
+        if session is not None:
+            url = '{}/REST/projects/{}/subjects/{}/experiments/{}/resources/{}/files/{}'.format(
+                base_url, project, subject, session, resource, file
+            )
+
+        if container_type is not None:
             url = '{}/REST/projects/{}/subjects/{}/experiments/{}/{}/{}/resources/{}/files/{}'.format(
                 base_url, project, subject, session, container_type, container, resource, file
             )
