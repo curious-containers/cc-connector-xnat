@@ -1,3 +1,4 @@
+import os
 import jsonschema
 import requests
 from requests.auth import HTTPBasicAuth
@@ -204,6 +205,15 @@ class Http:
             verify=verify
         )
         r.raise_for_status()
+
+    @staticmethod
+    def receive_cleanup(internal):
+        """
+        Removes the given file.
+
+        :param internal: A dictionary containing a path to the file to remove.
+        """
+        os.remove(internal['path'])
 
     @staticmethod
     def receive_validate(access):
