@@ -1,3 +1,4 @@
+import json
 from argparse import ArgumentParser
 
 import requests
@@ -14,6 +15,9 @@ SEND_FILE_VALIDATE_DESCRIPTION = 'Validate access data for send-file.'
 
 
 def _receive_file(access, local_file_path):
+    with open(access) as f:
+        access = json.load(f)
+
     auth_method = auth_method_obj(access)
 
     verify = True
@@ -73,10 +77,16 @@ def _receive_file(access, local_file_path):
 
 
 def _receive_file_validate(access):
+    with open(access) as f:
+        access = json.load(f)
+
     validate(access, RECEIVE_FILE_SCHEMA)
 
 
 def _send_file(access, local_file_path):
+    with open(access) as f:
+        access = json.load(f)
+
     auth_method = auth_method_obj(access)
 
     verify = True
@@ -233,6 +243,9 @@ def _send_file(access, local_file_path):
 
 
 def _send_file_validate(access):
+    with open(access) as f:
+        access = json.load(f)
+    
     validate(access, SEND_FILE_SCHEMA)
 
 
