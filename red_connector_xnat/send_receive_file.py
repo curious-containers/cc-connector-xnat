@@ -2,9 +2,10 @@ import json
 from argparse import ArgumentParser
 
 import requests
+import jsonschema
 
 from red_connector_xnat.schemas import SEND_FILE_SCHEMA, RECEIVE_FILE_SCHEMA
-from red_connector_xnat.helpers import validate, auth_method_obj
+from red_connector_xnat.helpers import auth_method_obj, graceful_error
 
 
 RECEIVE_FILE_DESCRIPTION = 'Receive input file from XNAT via HTTP(S).'
@@ -80,7 +81,7 @@ def _receive_file_validate(access):
     with open(access) as f:
         access = json.load(f)
 
-    validate(access, RECEIVE_FILE_SCHEMA)
+    jsonschema.validate(access, RECEIVE_FILE_SCHEMA)
 
 
 def _send_file(access, local_file_path):
@@ -246,9 +247,10 @@ def _send_file_validate(access):
     with open(access) as f:
         access = json.load(f)
     
-    validate(access, SEND_FILE_SCHEMA)
+    jsonschema.validate(access, SEND_FILE_SCHEMA)
 
 
+@graceful_error
 def receive_file():
     parser = ArgumentParser(description=RECEIVE_FILE_DESCRIPTION)
     parser.add_argument(
@@ -263,6 +265,7 @@ def receive_file():
     _receive_file(**args.__dict__)
 
 
+@graceful_error
 def receive_file_validate():
     parser = ArgumentParser(description=RECEIVE_FILE_VALIDATE_DESCRIPTION)
     parser.add_argument(
@@ -273,6 +276,7 @@ def receive_file_validate():
     _receive_file_validate(**args.__dict__)
 
 
+@graceful_error
 def send_file():
     parser = ArgumentParser(description=SEND_FILE_DESCRIPTION)
     parser.add_argument(
@@ -287,6 +291,7 @@ def send_file():
     _send_file(**args.__dict__)
 
 
+@graceful_error
 def send_file_validate():
     parser = ArgumentParser(description=SEND_FILE_VALIDATE_DESCRIPTION)
     parser.add_argument(
