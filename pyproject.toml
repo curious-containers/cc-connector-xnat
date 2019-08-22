@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "red-connector-xnat"
-version = "0.12"
+version = "1.0"
 authors = ["Christoph Jansen <Christoph.Jansen@htw-berlin.de>"]
 license = "AGPL-3.0"
 readme = "README.md"
